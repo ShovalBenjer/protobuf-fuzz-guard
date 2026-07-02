@@ -1,0 +1,27 @@
+---
+source: crates/pfg-core/tests/harness.rs
+expression: code
+---
+// Auto-generated fuzz harness by protobuf-fuzz-guard.
+// Go 1.18+ native fuzz target
+
+package acme_v1
+
+import (
+    "testing"
+    "google.golang.org/protobuf/proto"
+)
+
+func Fuzzperson(f *testing.F) {
+    f.Add([]byte{})  // Seed corpus: empty message
+    f.Add([]byte{0x0a, 0x00})  // Seed: field 1, length 0
+
+    f.Fuzz(func(t *testing.T, data []byte) {
+        msg := &acme.v1.Person{}
+        if err := proto.Unmarshal(data, msg); err != nil {
+            return
+        }
+        // Force full parsing
+        proto.Marshal(msg)
+    })
+}

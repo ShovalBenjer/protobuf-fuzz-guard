@@ -1,0 +1,5 @@
+[toolchain]
+# MSRV / dev channel policy. The fuzz crate additionally requires a nightly
+# toolchain (cargo-fuzz + libFuzzer); see fuzz/README.md.
+channel = "stable"
+components = ["clippy", "rustfmt"]

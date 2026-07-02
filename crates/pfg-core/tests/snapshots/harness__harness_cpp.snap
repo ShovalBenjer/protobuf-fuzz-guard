@@ -1,0 +1,21 @@
+---
+source: crates/pfg-core/tests/harness.rs
+expression: code
+---
+// Auto-generated fuzz harness by protobuf-fuzz-guard.
+// Compile: clang++ -fsanitize=fuzzer -lprotobuf person_fuzz.cc
+
+#include <cstdint>
+#include <cstring>
+#include "person.pb.h"
+
+extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
+    acme.v1.Person msg;
+    // Set recursion limit to catch stack overflows
+    msg.set_recursion_depth_limit(64);
+    msg.ParseFromArray(data, static_cast<int>(size));
+    // Force full parsing by serializing back
+    std::string output;
+    msg.SerializeToString(&output);
+    return 0;
+}

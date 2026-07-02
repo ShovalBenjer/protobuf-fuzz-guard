@@ -1,0 +1,36 @@
+---
+source: crates/pfg-core/tests/harness.rs
+expression: code
+---
+"""Auto-generated fuzz harness by protobuf-fuzz-guard."""
+
+import sys
+from pathlib import Path
+
+# Generated for: acme.v1.Person
+# Replace acme_v1_pb2 with your actual compiled protobuf module
+
+def fuzz_person(data: bytes) -> None:
+    """Fuzz target: parse raw bytes as Person."""
+    from acme_v1_pb2 import Person
+    try:
+        msg = Person()
+        msg.ParseFromString(data)
+        # Access all fields to trigger lazy parsing
+        msg.SerializeToString()
+        str(msg)
+    except Exception:
+        pass  # Expected on malformed input
+
+
+def main():
+    """Read from stdin or file argument for manual testing."""
+    if len(sys.argv) > 1:
+        data = Path(sys.argv[1]).read_bytes()
+    else:
+        data = sys.stdin.buffer.read()
+    fuzz_person(data)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,31 @@
+---
+source: crates/pfg-core/tests/harness.rs
+expression: code
+---
+// Auto-generated fuzz harness by protobuf-fuzz-guard.
+// Structure-aware libFuzzer target for `Person` using prost.
+//
+// Run with a nightly toolchain:
+//   cargo +nightly fuzz run fuzz_person
+//
+// prost enforces a recursion/nesting limit of 100 by default (DecodeContext),
+// guarding against stack-overflow DoS. See RUSTSEC-2020-0002 and pin prost >= 0.6.1.
+#![no_main]
+
+use libfuzzer_sys::fuzz_target;
+use prost::Message;
+
+// Replace `acme_v1` with the module of your generated prost types
+// for acme.v1.Person.
+use acme_v1::Person;
+
+fuzz_target!(|data: &[u8]| {
+    // Decode untrusted bytes. Errors (including RecursionLimitReached) are expected.
+    if let Ok(msg) = Person::decode(data) {
+        // Round-trip: re-encode, then decode again to exercise both directions.
+        let mut buf = Vec::with_capacity(msg.encoded_len());
+        msg.encode(&mut buf)
+            .expect("re-encoding a successfully decoded message is infallible");
+        let _ = Person::decode(buf.as_slice());
+    }
+});
