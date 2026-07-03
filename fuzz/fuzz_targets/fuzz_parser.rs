@@ -1,5 +1,5 @@
 //! Self-dogfooding fuzz target (research §5): the scanner must never panic on
-//! hostile `.proto` text. We fuzz the full pipeline — parse → scan → generate —
+//! hostile `.proto` text. We fuzz the full pipeline (parse, scan, generate)
 //! against arbitrary input.
 //!
 //! Run (nightly required):

@@ -1,4 +1,4 @@
-//! `protofuzz` — scan `.proto` files for CVE/DoS patterns and generate
+//! `protofuzz`: scan `.proto` files for CVE/DoS patterns and generate
 //! cross-language fuzz harnesses.
 //!
 //! Output convention (research §2): data / JSON goes to **stdout**; progress and

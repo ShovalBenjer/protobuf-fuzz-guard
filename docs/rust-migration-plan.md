@@ -26,7 +26,7 @@ adoption risk for a security tool); `tree-sitter-proto` is compelling for spans
 but was 4 commits old (§4, maturity risk). The current scanner is already a
 line/regex model, and the CVE-relevant signals (`group`, message nesting depth,
 `repeated` nested/bytes) are lexically local. So Phase 1 keeps a **self-contained
-span-aware scanner** — no supply-chain surface added to a security tool — and we
+span-aware scanner** - no supply-chain surface added to a security tool - and we
 treat descriptor-level analysis as an *additive* later phase, not a prerequisite.
 
 ## Target workspace layout
@@ -58,7 +58,7 @@ protobuf-fuzz-guard/
 
 ## Phased milestones
 
-### Phase 0 — Scaffold & CI skeleton
+### Phase 0 - Scaffold & CI skeleton
 - `cargo new` workspace; add `pfg-core`, `protofuzz-cli`.
 - `[workspace.dependencies]`: `clap` (derive), `thiserror`, `miette` (fancy),
   `serde`/`serde_json`. `[workspace.lints]` enabling clippy pedantic (selectively).
@@ -66,7 +66,7 @@ protobuf-fuzz-guard/
 - CI: fmt-check, clippy `-D warnings`, nextest, cargo-audit (see §10 gates).
 - **Exit criterion:** empty workspace builds green in CI.
 
-### Phase 1 — Port the parser (span-aware)
+### Phase 1 - Port the parser (span-aware)
 - Translate `proto_parser.py` → `pfg-core::proto`. Keep the model
   (`ProtoFile`/`ProtoMessage`/`ProtoField`) but attach **byte spans** to every
   message/field so findings can carry miette labels.
@@ -76,9 +76,9 @@ protobuf-fuzz-guard/
 - **Exit criterion:** parser tests pass; parses the existing Python test fixtures
   identically.
 
-### Phase 2 — Port patterns + scanner with real CVE data
+### Phase 2 - Port patterns + scanner with real CVE data
 - Port `models.py` catalog; **correct CVE-2024-7254 metadata** (Java/Kotlin/JRuby,
-  groups-as-unknown-fields — not "cpp") per research §9.
+  groups-as-unknown-fields - not "cpp") per research §9.
 - Add **RUSTSEC-2020-0002** (prost) and **RUSTSEC-2024-0437** (rust-protobuf) as
   first-class Rust patterns, with fixed-version notes.
 - Port `scanner.py` rules; emit findings as **miette `Diagnostic`s with source
@@ -87,7 +87,7 @@ protobuf-fuzz-guard/
 - Tests: port `test_scanner.py`; snapshot the rendered diagnostics with `insta`.
 - **Exit criterion:** scanner parity with Python on all fixtures + spans render.
 
-### Phase 3 — Harness generator incl. the new Rust target
+### Phase 3 - Harness generator incl. the new Rust target
 - Port `harness_gen.py` templates (python/cpp/go) verbatim into string templates.
 - **Add `harness/rust.rs`**: generate a `libfuzzer-sys` `fuzz_target!` that
   `prost::Message::decode`s the bytes, does a **decode→encode→decode roundtrip**,
@@ -95,11 +95,11 @@ protobuf-fuzz-guard/
   Optionally emit an `#[derive(Arbitrary)]` structure-aware variant.
 - CLI `--lang rust` support; output `fuzz_<msg>.rs`.
 - Tests: `insta` snapshots of all four languages; a compile-check test that the
-  generated Rust harness at least parses (syntax) — full build is a fuzz-crate job.
+  generated Rust harness at least parses (syntax) - full build is a fuzz-crate job.
 - **Exit criterion:** `generate --lang rust` emits a harness that compiles against
   a prost-generated type in the `fuzz/` example.
 
-### Phase 4 — CLI parity
+### Phase 4 - CLI parity
 - `clap` derive: `scan` / `generate` / `patterns` subcommands mirroring
   `cli.py`, `--json` on stdout, logs on stderr (§2), exit codes (0 clean, 1
   critical, 2 usage).
@@ -107,9 +107,9 @@ protobuf-fuzz-guard/
 - **Exit criterion:** `protofuzz` CLI behavior matches the Python CLI on the same
   inputs (byte-for-byte JSON where feasible).
 
-### Phase 5 — Self-dogfooding fuzz crate + optional descriptor road
+### Phase 5 - Self-dogfooding fuzz crate + optional descriptor road
 - `fuzz/` crate (nightly-gated): a `fuzz_target!` over `pfg-core`'s **own parser**
-  (fuzz the scanner with arbitrary `.proto` text) — the tool proves it doesn't
+  (fuzz the scanner with arbitrary `.proto` text) - the tool proves it doesn't
   panic on hostile schemas. Seed corpus from `tests/` fixtures; `cargo fuzz cmin`.
 - CI: a **non-blocking nightly** job running a short `cargo fuzz run` smoke
   (bounded `-max_total_time`), since cargo-fuzz needs nightly + Unix (§5).
@@ -118,7 +118,7 @@ protobuf-fuzz-guard/
   resolution, cross-file type refs) the lexical scanner can't do (§4).
 - **Exit criterion:** fuzz smoke runs clean for its time budget in CI.
 
-### Phase 6 — Cutover & hardening
+### Phase 6 - Cutover & hardening
 - Flip the default entry point to Rust; move Python under `legacy/` (or delete
   after a parity sign-off documented in the plan).
 - Release build with **`cargo-auditable`**; publish SBOM via `cargo-cyclonedx` (§8).

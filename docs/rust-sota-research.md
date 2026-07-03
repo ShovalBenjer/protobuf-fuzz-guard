@@ -1,10 +1,10 @@
-# Rust SOTA Practices for protobuf-fuzz-guard — Research Report
+# Rust SOTA Practices for protobuf-fuzz-guard - Research Report
 
 > **Method.** This report was produced by a fan-out research harness: the question
 > was decomposed into search angles, ~30 sources were fetched, falsifiable claims
 > were extracted, and each claim went through 3-vote adversarial verification
 > (a claim is killed only if ≥2 of 3 independent skeptics refute it). **112 claims
-> were extracted; across 75 verification votes, 0 were refuted** — every finding
+> were extracted; across 75 verification votes, 0 were refuted** - every finding
 > below survived. Confidence tags reflect source quality: **[primary]** = official
 > docs / advisory DB, **[secondary]** = reputable engineering handbook,
 > **[blog]** = practitioner write-up.
@@ -13,7 +13,7 @@
 
 ---
 
-## 0. Executive summary — what to actually use
+## 0. Executive summary - what to actually use
 
 | Domain | Recommendation | Confidence |
 |---|---|---|
@@ -32,7 +32,7 @@
 | CI gates | `clippy -D warnings`, `cargo fmt --check`, `cargo-nextest`, `cargo-llvm-cov`, sccache | blog |
 
 The single most important **project-relevant** finding: the CVE classes this tool
-scans for are **real, live, and have direct Rust analogues** — CVE-2024-7254
+scans for are **real, live, and have direct Rust analogues** - CVE-2024-7254
 (protobuf-java group recursion DoS), RUSTSEC-2020-0002 (prost stack overflow),
 and RUSTSEC-2024-0437 (rust-protobuf `skip_group` uncontrolled recursion). A Rust
 port is not just a rewrite; it lets the scanner's own runtime carry the defenses
@@ -48,14 +48,14 @@ it preaches. See §9.
   version drift across a multi-crate workspace. [secondary]
 - A Rust binary statically includes **every transitive dependency** recorded in
   `Cargo.lock`; any vuln, license violation, or malicious crate in the tree
-  becomes the project's problem — so the workspace boundary is also a
+  becomes the project's problem - so the workspace boundary is also a
   security boundary. [secondary]
 - **`Cargo.lock` should always be committed** for binary crates / CLI tools, and
   builds should use **`cargo build --locked`** to fail if the lockfile drifts. [blog]
 
-**Implication for us:** a small workspace — a core library crate (parser +
+**Implication for us:** a small workspace - a core library crate (parser +
 scanner + harness generator), a thin CLI binary crate, and a separate `fuzz/`
-crate — with all versions declared once under `[workspace.dependencies]`.
+crate - with all versions declared once under `[workspace.dependencies]`.
 
 ## 2. CLI design
 
@@ -84,8 +84,8 @@ progress/log lines to stderr, and preserve the "1 on critical" contract.
   **`thiserror` for custom error enums** in libraries or when matching specific
   error variants programmatically. Repeated across multiple sources as the
   consensus split. [blog]
-- `snafu` is the third option — finer-grained, structured context fields +
-  dynamic templates — for complex systems where maintainability matters. [blog]
+- `snafu` is the third option - finer-grained, structured context fields +
+  dynamic templates - for complex systems where maintainability matters. [blog]
 - The three map to distinct strategies: **anyhow = unified dynamic type,
   thiserror = static custom type, snafu = domain-driven type.** [blog]
 - `anyhow::Error` is **8 bytes** (smaller than most custom enums), a reason to
@@ -94,47 +94,47 @@ progress/log lines to stderr, and preserve the "1 on critical" contract.
   with a **derive macro**, designed to **interoperate with `thiserror`**. [primary]
 - miette offers `Result`, `Report`, and a `miette!` macro as **drop-in
   replacements for anyhow/eyre**. [primary]
-- miette supports **source-span diagnostics** — highlighting specific spans,
-  single- and multi-line — and renders **fancy graphical output** (ANSI/Unicode)
+- miette supports **source-span diagnostics** - highlighting specific spans,
+  single- and multi-line - and renders **fancy graphical output** (ANSI/Unicode)
   with **clickable error-code links** in supported terminals. [primary]
 - miette has **accessibility features** (screen-reader/braille, gated on
   `NO_COLOR`). MSRV reported as **1.82.0** (docs.rs latest); a 7.6.0 release is
   dated 2026-05-29, and v7.1.0 was 2024-02-16. [primary]
 
 **Implication for us:** `thiserror` for the library's error enum, **`miette` for
-the scanner's diagnostics** — because a `.proto` linter's entire value is pointing
+the scanner's diagnostics** - because a `.proto` linter's entire value is pointing
 at *the exact line/span* of a risky construct. This is a strict upgrade over the
 current Python tool, which reports findings without source spans.
 
-## 4. Parsing `.proto` files — the pivotal decision
+## 4. Parsing `.proto` files - the pivotal decision
 
 The core question: what produces an inspectable model of a `.proto` schema for a
 **linter/scanner** (not a codegen consumer)?
 
-**prost / prost-build — NOT the parser we want.**
+**prost / prost-build - NOT the parser we want.**
 - `prost` is a **code-generation tool** that produces idiomatic Rust types via
   derive attributes, **not a linting/scanning tool** for `.proto` source. [primary]
 - **`prost-build` requires an external `protoc` binary** and does **not implement
-  its own `.proto` parser** — so it can't be a standalone parser. [primary]
+  its own `.proto` parser** - so it can't be a standalone parser. [primary]
 - prost is **only passively maintained** (maintainer not adding/reviewing new
   features). [primary]
 
-**`protobuf-parse` (rust-protobuf family) — descriptor-oriented.**
+**`protobuf-parse` (rust-protobuf family) - descriptor-oriented.**
 - Parses `.proto` into a **`FileDescriptorSet`**; offers **both a pure-Rust parser
   (no external deps) and a `protoc`-wrapper** (protoc noted as more reliable /
   Google-compatible). Exposes a `Parser` struct + `ProtoPath`/`ProtoPathBuf`. v3.7.2,
   MIT. [primary]
-- **Caveat:** explicitly **not intended for direct use, no stable API** — it's an
+- **Caveat:** explicitly **not intended for direct use, no stable API** - it's an
   internal component of `protobuf-codegen`. [primary] → adoption risk.
 
-**`prost-reflect` — inspection over descriptors.**
+**`prost-reflect` - inspection over descriptors.**
 - Provides `DynamicMessage` + a **`DescriptorPool` that consumes a
   `FileDescriptorSet`** and exposes an API for inspecting type definitions at
-  runtime — **directly relevant to a linter/scanner over descriptors.** [primary]
+  runtime - **directly relevant to a linter/scanner over descriptors.** [primary]
 - With `serde`, `DynamicMessage` round-trips canonical protobuf JSON (JSON
   output). Dual MIT/Apache-2.0. [primary]
 
-**tree-sitter-proto — span-first AST.**
+**tree-sitter-proto - span-first AST.**
 - A tree-sitter grammar → an **incremental parser** that inherently yields **node
   source spans/positions usable for linting.** Ships `Cargo.toml` + bindings dir
   (Rust bindings). MIT. [primary]
@@ -142,11 +142,11 @@ The core question: what produces an inspectable model of a `.proto` schema for a
   star, 0 forks, 4 commits). [primary]
 - Practitioner evidence: tree-sitter parses `.proto` into a **robust AST handling
   edge cases (e.g. comment blocks) that brittle regex/string matching breaks
-  on** — explicitly preferable to protoc plugins (template-limited) and
+  on** - explicitly preferable to protoc plugins (template-limited) and
   protoreflect (runtime, "painful") for *consuming* definitions. (Write-up
   targets Go bindings, so relevance is by analogy of technique.) [blog]
 
-**Protofish — runtime decoder, not a linter.**
+**Protofish - runtime decoder, not a linter.**
 - PEG (Pest) parser based on the proto3 language spec; **primary goal is decoding
   arbitrary wire-format messages with error recovery**, not schema linting. [primary]
 - Parses into a **`Context` queried at runtime** (not a traditional typed AST);
@@ -154,10 +154,10 @@ The core question: what produces an inspectable model of a `.proto` schema for a
   maintained (v0.5.3, 2025-12-06). [primary]
 
 **Decision for us (see plan §3):** two viable roads.
-1. **Span-first lint road** — `tree-sitter-proto` gives byte-accurate spans that
+1. **Span-first lint road** - `tree-sitter-proto` gives byte-accurate spans that
    pair perfectly with miette, matching the current regex-based scanner's
    line-oriented model but robustly. Risk: grammar immaturity → vendor/pin it.
-2. **Descriptor road** — `protobuf-parse` (pure-Rust) → `FileDescriptorSet` →
+2. **Descriptor road** - `protobuf-parse` (pure-Rust) → `FileDescriptorSet` →
    inspect with `prost-reflect`'s `DescriptorPool`. Semantically richer (resolves
    types, imports) but the parser has no stable API, and spans are coarser.
 
@@ -166,7 +166,7 @@ recursive-descent / `nom`-style parser retaining spans** is also a legitimate
 zero-heavy-dep option and keeps full control of the exact CVE-relevant tokens
 (`group`, nesting depth, `repeated`). The plan recommends starting span-first.
 
-## 5. Fuzzing — SOTA in Rust
+## 5. Fuzzing - SOTA in Rust
 
 - **`cargo-fuzz`** is a cargo subcommand using **libFuzzer** as the engine
   (`cargo fuzz init/add/run`). [primary]
@@ -175,7 +175,7 @@ zero-heavy-dep option and keeps full control of the exact CVE-relevant tokens
 - Corpus/crash minimization: **`cargo fuzz cmin`** (minify corpus) and
   **`cargo fuzz tmin`** (minimize a failing input). [primary]
 - The **`libfuzzer-sys` `fuzz_target!` macro accepts any `Arbitrary` type**, not
-  just `&[u8]` — enabling **generation-based structure-aware fuzzing** (directly
+  just `&[u8]` - enabling **generation-based structure-aware fuzzing** (directly
   applicable to prost-decoded types). [primary]
 - `fuzz_target!` supports an optional **`init` block** for one-time expensive
   setup of read-only global state. [primary]
@@ -210,13 +210,13 @@ Synthesizing §4–5 into what a *generated* Rust harness should contain:
   `#[derive(Arbitrary)]` typed input for structure-aware runs. [primary]
 - **Roundtrip** property (decode → re-encode → decode) is the canonical target;
   the `arbitrary` docs explicitly cite roundtrip-equality property testing. [primary]
-- **Recursion limit is free** with prost — its `DecodeContext` enforces a limit of
+- **Recursion limit is free** with prost - its `DecodeContext` enforces a limit of
   100 by default; a generated harness decoding untrusted input inherits DoS
   protection unless `no-recursion-limit` is set. [primary] (see §9)
 - Use `fuzz_target!`'s `init` block for one-time descriptor/pool setup when
   fuzzing dynamic messages. [primary]
 
-This is the **Rust analogue of the tool's existing Python/C++/Go templates** — and
+This is the **Rust analogue of the tool's existing Python/C++/Go templates** - and
 it's the higher-fidelity one, because prost's decoder is memory-safe and its
 recursion behavior is inspectable/testable.
 
@@ -227,12 +227,12 @@ recursion behavior is inspectable/testable.
   reproducers. [primary]
 - Uses explicit **`Strategy` objects** (not type-based generation) → multiple
   strategies per type, better composition/constraints. [primary]
-- Does **integrated shrinking** (keeps intermediate state relationships) — more
+- Does **integrated shrinking** (keeps intermediate state relationships) - more
   sophisticated than stateless shrinking, at some perf cost. [primary]
 - proptest is **feature-complete / passively maintained**; **MSRV 1.86**. [primary]
 - **`cargo-nextest`** is the recommended CI test runner (`cargo nextest run`). [blog]
 - (Snapshot testing with `insta` was in scope; no verified claim survived the
-  fetch stage, so it's a recommendation-by-convention, not a cited finding — good
+  fetch stage, so it's a recommendation-by-convention, not a cited finding - good
   fit for asserting generated-harness output text.)
 
 **Implication for us:** the Python test suite (parser/scanner/harness/CLI) maps to
@@ -249,7 +249,7 @@ text is a natural **snapshot** target.
   **`cargo audit --deny warnings`**, run **daily** (advisories publish
   continuously). [primary/blog]
 - **`cargo-deny`** enforces policy across **advisories, licenses, bans, sources**
-  via **`deny.toml`** — allow/deny license lists, ban crates, detect duplicate
+  via **`deny.toml`** - allow/deny license lists, ban crates, detect duplicate
   versions. [primary/secondary]
 - **`cargo-vet`** (Mozilla) verifies a **trusted human reviewed** dependency code;
   imports audits from Mozilla/Google/Bytecode Alliance; best for
@@ -257,20 +257,20 @@ text is a natural **snapshot** target.
 - **`cargo-auditable`** embeds the dependency tree into the compiled binary so
   **production executables can be audited** by cargo-audit. [primary]
 - **Build scripts (`build.rs`) and proc macros execute arbitrary code at build
-  time** with FS/network access — an attack surface memory-safety does **not**
+  time** with FS/network access - an attack surface memory-safety does **not**
   cover. [blog]
 - SBOM: `cargo-cyclonedx` / `cargo-auditable` per the Rust SBOM guide. [primary]
 
-**Implication for us:** this is a *security* tool — its own supply chain must be
+**Implication for us:** this is a *security* tool - its own supply chain must be
 exemplary. Ship `deny.toml`, a daily `cargo-audit` CI job, committed `Cargo.lock`,
 `--locked` builds, and build with `cargo-auditable` so released binaries are
 self-describing. Minimize deps precisely because each is statically linked in.
 
-## 9. Protobuf-specific security — the heart of the tool
+## 9. Protobuf-specific security - the heart of the tool
 
 This is where the research most directly validates and sharpens the product.
 
-**CVE-2024-7254 (the tool's flagship pattern) — confirmed.**
+**CVE-2024-7254 (the tool's flagship pattern) - confirmed.**
 - A **Denial of Service via Stack Overflow** in protobuf's **Java/Kotlin**
   libraries, caused by **unbounded recursion when parsing nested groups as unknown
   fields.** [primary]
@@ -287,12 +287,12 @@ This is where the research most directly validates and sharpens the product.
 > and the trigger description.
 
 **Rust has its own instances of exactly this bug class:**
-- **RUSTSEC-2020-0002 / CVE-2020-35858:** `prost` **< 0.6.1** — decoding
+- **RUSTSEC-2020-0002 / CVE-2020-35858:** `prost` **< 0.6.1** - decoding
   untrusted/nested input **overflows the stack** (DoS; on no-stack-probe arches
   like ARM, potential memory corruption/RCE). **CVSS 9.8 CRITICAL.** Fixed in
   **≥ 0.6.1.** Reported 2020-01-16, issued 2020-10-01. [primary]
 - **RUSTSEC-2024-0437 / CVE-2025-53605:** the **`protobuf` (rust-protobuf)** crate
-  **≤ 3.4.0** — **uncontrolled recursion in `skip_group`** lets attacker data
+  **≤ 3.4.0** - **uncontrolled recursion in `skip_group`** lets attacker data
   trigger stack overflow (DoS). **Fixed in ≥ 3.7.2.** Confirms **unknown-field /
   group handling is a real memory-exhaustion surface in Rust runtimes too.** [primary]
 
@@ -303,7 +303,7 @@ This is where the research most directly validates and sharpens the product.
   **`limit_reached()`** returning `Err(DecodeError)` at the limit;
   **`enter_recursion()`** produces a fresh context with a decremented counter;
   exceeding it yields **`DecodeErrorKind::RecursionLimitReached`.** [primary]
-- Disable-able via the **`no-recursion-limit`** feature — **not advisable for
+- Disable-able via the **`no-recursion-limit`** feature - **not advisable for
   untrusted input.** [primary]
 
 **Product implications (large):**
@@ -335,42 +335,42 @@ This is where the research most directly validates and sharpens the product.
 ## Source list (verified, deduplicated)
 
 Official / primary docs & advisories:
-- prost — <https://github.com/tokio-rs/prost>, encoding source
+- prost - <https://github.com/tokio-rs/prost>, encoding source
   <https://docs.rs/prost/latest/src/prost/encoding.rs.html>
-- prost-reflect — <https://docs.rs/prost-reflect/latest/prost_reflect/>
-- protobuf-parse — <https://docs.rs/protobuf-parse/latest/protobuf_parse/>
-- protofish — <https://lib.rs/crates/protofish>
-- tree-sitter-proto — <https://github.com/Clement-Jean/tree-sitter-proto>
-- miette — <https://docs.rs/miette/latest/miette/>, <https://github.com/zkat/miette>
-- arbitrary — <https://github.com/rust-fuzz/arbitrary>
-- cargo-fuzz — <https://github.com/rust-fuzz/cargo-fuzz>,
+- prost-reflect - <https://docs.rs/prost-reflect/latest/prost_reflect/>
+- protobuf-parse - <https://docs.rs/protobuf-parse/latest/protobuf_parse/>
+- protofish - <https://lib.rs/crates/protofish>
+- tree-sitter-proto - <https://github.com/Clement-Jean/tree-sitter-proto>
+- miette - <https://docs.rs/miette/latest/miette/>, <https://github.com/zkat/miette>
+- arbitrary - <https://github.com/rust-fuzz/arbitrary>
+- cargo-fuzz - <https://github.com/rust-fuzz/cargo-fuzz>,
   <https://rust-fuzz.github.io/book/cargo-fuzz/structure-aware-fuzzing.html>
-- proptest — <https://github.com/proptest-rs/proptest>
-- RustSec — <https://rustsec.org/>,
+- proptest - <https://github.com/proptest-rs/proptest>
+- RustSec - <https://rustsec.org/>,
   RUSTSEC-2020-0002 <https://rustsec.org/advisories/RUSTSEC-2020-0002.html>,
   RUSTSEC-2024-0437 <https://rustsec.org/advisories/RUSTSEC-2024-0437.html>
-- CVE-2024-7254 — <https://github.com/protocolbuffers/protobuf/security/advisories/GHSA-735f-pc8j-v9w8>,
+- CVE-2024-7254 - <https://github.com/protocolbuffers/protobuf/security/advisories/GHSA-735f-pc8j-v9w8>,
   <https://github.com/advisories/GHSA-735f-pc8j-v9w8>,
   <https://www.miggo.io/vulnerability-database/cve/CVE-2024-7254>
-- shellshape rust-cli-template — <https://github.com/shellshape/rust-cli-template>
+- shellshape rust-cli-template - <https://github.com/shellshape/rust-cli-template>
 
 Engineering handbooks / secondary:
-- Microsoft Rust Engineering — Dependency Management & Supply Chain Security —
+- Microsoft Rust Engineering - Dependency Management & Supply Chain Security -
   <https://microsoft.github.io/RustTraining/engineering-book/ch06-dependency-management-and-supply-chain-s.html>
-- Trail of Bits Testing Handbook — Writing harnesses —
+- Trail of Bits Testing Handbook - Writing harnesses -
   <https://appsec.guide/docs/fuzzing/rust/techniques/writing-harnesses/>
-- SBOM for Rust — <https://sbomify.com/guides/rust>
+- SBOM for Rust - <https://sbomify.com/guides/rust>
 
 Practitioner blogs:
-- Nethercote, derive(Arbitrary) speed —
+- Nethercote, derive(Arbitrary) speed -
   <https://nnethercote.github.io/2025/08/16/speed-wins-when-fuzzing-rust-code-with-derive-arbitrary.html>
-- Parsing protobuf with tree-sitter — <https://relistan.com/parsing-protobuf-files-with-treesitter>
-- Rust error-handling tools — <https://leapcell.io/blog/choosing-the-right-rust-error-handling-tool>
-- Rust CLI with clap + error handling —
+- Parsing protobuf with tree-sitter - <https://relistan.com/parsing-protobuf-files-with-treesitter>
+- Rust error-handling tools - <https://leapcell.io/blog/choosing-the-right-rust-error-handling-tool>
+- Rust CLI with clap + error handling -
   <https://oneuptime.com/blog/post/2026-01-07-rust-cli-clap-error-handling/view>
-- Beautiful Rust CLI tools — <https://gist.github.com/g1ibby/786cc16cc981090abb6692d5d40a6e1b>
-- Rust supply chain security — <https://www.systemshardening.com/articles/cicd/rust-cargo-supply-chain-security/>
-- Rust CI/CD primer (Shuttle) — <https://www.shuttle.dev/blog/2025/01/23/setup-rust-ci-cd>
+- Beautiful Rust CLI tools - <https://gist.github.com/g1ibby/786cc16cc981090abb6692d5d40a6e1b>
+- Rust supply chain security - <https://www.systemshardening.com/articles/cicd/rust-cargo-supply-chain-security/>
+- Rust CI/CD primer (Shuttle) - <https://www.shuttle.dev/blog/2025/01/23/setup-rust-ci-cd>
 
 *Coverage note:* `insta` snapshot testing, `cargo-llvm-cov`, criterion/divan, and
 `nom`/`chumsky`/`pest` parser combinators were in the research scope but did not

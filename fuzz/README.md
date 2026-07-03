@@ -1,7 +1,7 @@
 # pfg-fuzz
 
 Self-dogfooding fuzz targets for `pfg-core`. The scanner is a security tool, so
-it must never panic on hostile input — these targets prove that.
+it must never panic on hostile input, and these targets prove that.
 
 ## Requirements
 
@@ -25,4 +25,4 @@ cargo +nightly fuzz tmin fuzz_parser <artifact>   # minimize a crash
 
 ## Targets
 
-- `fuzz_parser` — parse → scan → generate over arbitrary bytes (as UTF-8).
+- `fuzz_parser`: parse, scan, and generate over arbitrary bytes (as UTF-8).
