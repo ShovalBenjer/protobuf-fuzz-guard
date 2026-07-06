@@ -1,0 +1,36 @@
+# cargo-deny policy (research §8). Run: cargo deny check
+# Enforces advisories (RustSec), licenses, source provenance, and dependency bans.
+
+[advisories]
+version = 2
+# Fail on any advisory in the tree. `cargo audit` runs the same DB in CI daily.
+yanked = "deny"
+ignore = []
+
+[licenses]
+version = 2
+# Permissive licenses only. This is a security tool distributed as a binary that
+# statically links every dependency, so licensing is part of the threat model.
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-3.0",
+    "Unicode-DFS-2016",
+    "Zlib",
+]
+confidence-threshold = 0.9
+
+[bans]
+# Warn on duplicate versions to keep the dependency tree (and attack surface) lean.
+multiple-versions = "warn"
+wildcards = "warn"
+
+[sources]
+# Only crates.io; no unknown registries or git sources.
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

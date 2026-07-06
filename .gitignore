@@ -4,3 +4,14 @@ __pycache__/
 *.egg-info/
 dist/
 .pytest_cache/
+
+# Rust
+/target
+/crates/*/target
+/fuzz/target
+/fuzz/corpus
+/fuzz/artifacts
+# Cargo.lock IS committed for this binary/CLI workspace (see docs/rust-sota-research.md §8).
+# insta pending snapshots
+*.snap.new
+
