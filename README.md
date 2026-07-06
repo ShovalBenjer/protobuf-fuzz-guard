@@ -1,14 +1,13 @@
 # protobuf-fuzz-guard
 
-Find the dangerous parts of a Protocol Buffers schema before an attacker does,
-then generate the fuzz harnesses to prove it.
+Catch protobuf schema vulnerabilities before attackers do, and turn every
+message into a running fuzz campaign across four languages from one command.
 
-`protobuf-fuzz-guard` reads your `.proto` files, scans them for the structural
-patterns behind real protobuf CVEs (unbounded recursion, deprecated groups,
-memory-exhaustion shapes), and emits ready-to-run fuzz harnesses for **Python,
-C++, Go, and Rust**. Findings are reported as source-highlighted diagnostics
-that point at the exact field, so a scan result reads like a compiler error, not
-a wall of text.
+`protobuf-fuzz-guard` reads your `.proto` files, flags the exact constructs
+behind real protobuf CVEs, and generates fuzz harnesses for **Python, C++, Go,
+and Rust**. Findings render as source-highlighted diagnostics that point at the
+offending field, so a scan reads like a compiler error and drops straight into
+CI.
 
 ```
   × Recursive message reference: Tree.left references itself. Vulnerable to
@@ -23,34 +22,33 @@ a wall of text.
   help: Unbounded stack recursion via deeply nested messages
 ```
 
-> This project is being ported from Python to Rust. The Rust workspace under
-> `crates/` is the going-forward implementation and the subject of this README.
-> The original Python package under `src/` stays in place until the cutover
-> described in [`docs/rust-migration-plan.md`](docs/rust-migration-plan.md) is
-> signed off. Every engineering decision here is backed by a cited research
-> report, [`docs/rust-sota-research.md`](docs/rust-sota-research.md).
+> The Rust workspace under `crates/` is the maintained implementation. The
+> original Python package under `src/` stays until the cutover in
+> [`docs/rust-migration-plan.md`](docs/rust-migration-plan.md). Every design
+> decision is backed by a cited report, [`docs/rust-sota-research.md`](docs/rust-sota-research.md).
 
-## Two ways to use it
+## Why it matters
 
-**Scan.** Point it at a schema and get a prioritized list of DoS and CVE-class
-risks, with the offending line highlighted. Exit code `1` on any critical
-finding makes it a drop-in CI gate.
+Protobuf parsers ship the same vulnerability classes across every language.
+This tool checks your schema against three that are documented in primary
+advisories:
 
-**Generate.** Turn every message in a schema into a fuzz harness for the
-language of your choice. The Rust target decodes with `prost` and round-trips,
-inheriting prost's built-in recursion limit as a first line of defense.
+| Advisory | Runtime | Class | Fixed in |
+| --- | --- | --- | --- |
+| CVE-2024-7254 (CVSS 8.7) | protobuf-java, protobuf-kotlin, JRuby | Stack overflow parsing nested groups as unknown fields | 3.25.5, 4.27.5, 4.28.2 |
+| RUSTSEC-2020-0002 (CVE-2020-35858, CVSS 9.8) | Rust prost | Stack overflow decoding deeply nested input | prost 0.6.1 |
+| RUSTSEC-2024-0437 (CVE-2025-53605) | Rust protobuf | Uncontrolled recursion in `skip_group` | rust-protobuf 3.7.2 |
 
-## Features
+## What you get
 
-- Span-accurate diagnostics rendered with `miette`, so findings point at the
-  exact field and line.
-- A catalog of protobuf vulnerability classes grounded in primary advisories:
-  CVE-2024-7254, RUSTSEC-2020-0002, and RUSTSEC-2024-0437.
-- Harness generation for Python, C++, Go, and Rust from a single command.
-- JSON output for scripting and CI (`--json`).
-- Scriptable exit codes: `0` clean, `1` critical findings, `2` usage error.
-- No network access and a deliberately small dependency tree, verified in CI by
-  `cargo-audit` and `cargo-deny`.
+- Source-span diagnostics that name the exact field and line, rendered with
+  `miette`.
+- Fuzz harnesses for four languages from a single command.
+- A vulnerability catalog grounded in the three advisories above.
+- JSON output and a `1` exit code on critical findings, so `protofuzz scan` is a
+  CI gate on its own.
+- A single static binary. No runtime, no network access, and a dependency tree
+  audited in CI by `cargo-audit` and `cargo-deny`.
 
 ## Install
 
@@ -59,36 +57,38 @@ cargo build --release --locked
 ./target/release/protofuzz --help
 ```
 
-## Usage
-
-Scan a schema. Diagnostics go to stderr, so you can pipe or redirect freely.
+## Scan a schema
 
 ```sh
 protofuzz scan path/to/service.proto
 ```
 
-Get machine-readable findings on stdout.
+Diagnostics print to stderr. Add `--json` for machine-readable findings on
+stdout:
 
 ```sh
 protofuzz scan --json path/to/service.proto
 ```
 
-Generate harnesses. By default all four languages are written to
-`fuzz_harnesses/<lang>/`. Pass `-l` one or more times to narrow the set.
+Gate a pipeline on it. The command exits `1` when any critical finding is
+present:
+
+```sh
+protofuzz scan proto/**/*.proto
+```
+
+## Generate harnesses
+
+One command writes harnesses for every message to `fuzz_harnesses/<lang>/`. Pass
+`-l` to select languages:
 
 ```sh
 protofuzz generate service.proto -l rust -l go -o out/
 ```
 
-List the vulnerability catalog the scanner checks against.
+## Try it now
 
-```sh
-protofuzz patterns
-```
-
-### Try it first
-
-Save this as `tree.proto` and scan it:
+Save this as `tree.proto`:
 
 ```proto
 syntax = "proto3";
@@ -100,23 +100,18 @@ message Tree {
 }
 ```
 
+Scan it:
+
 ```sh
 protofuzz scan tree.proto
 ```
 
-You will get three critical findings: the two recursive references and the
-deprecated `group` field, each highlighted at its source location, and an exit
-code of `1`.
+You get three critical findings, each highlighted at its source location: the
+two recursive references and the deprecated `group` field. Exit code `1`.
 
-### Use it in CI
+## Detection rules
 
-```sh
-protofuzz scan proto/**/*.proto || exit 1
-```
-
-## What it detects
-
-| Rule | Severity | Attributed pattern |
+| Rule | Severity | Pattern |
 | --- | --- | --- |
 | Message nesting depth of 5 or more | critical | `PROTOBUF-RECURSION-PROTO2` |
 | Message nesting depth of 3 to 4 | warning | none |
@@ -125,22 +120,11 @@ protofuzz scan proto/**/*.proto || exit 1
 | Repeated nested message | warning | none |
 | Three or more repeated `bytes` fields | warning | `PROTOBUF-UNKNOWN-FIELD-OVERFLOW` |
 
-## CVE and RUSTSEC cross-reference
+## Generated Rust harness
 
-The scanner is grounded in live advisory classes, verified against primary
-sources (see the research report, section 9).
-
-| Advisory | Runtime | Class | Fixed in |
-| --- | --- | --- | --- |
-| CVE-2024-7254 (CVSS 8.7) | protobuf-java, protobuf-kotlin, JRuby | Stack overflow parsing nested groups as unknown fields | 3.25.5, 4.27.5, 4.28.2 |
-| RUSTSEC-2020-0002 (CVE-2020-35858, CVSS 9.8) | Rust `prost` | Stack overflow decoding deeply nested input | prost 0.6.1 or later |
-| RUSTSEC-2024-0437 (CVE-2025-53605) | Rust `protobuf` | Uncontrolled recursion in `skip_group` | rust-protobuf 3.7.2 or later |
-
-The generated Rust harness decodes with `prost`, whose `DecodeContext` enforces
-a recursion limit of 100 by default. A harness built from this tool therefore
-inherits DoS protection unless `no-recursion-limit` is explicitly enabled.
-
-## How a generated Rust harness looks
+The Rust target decodes with `prost` and round-trips. `prost` enforces a
+recursion limit of 100 by default through `DecodeContext`, so the harness
+carries DoS protection unless `no-recursion-limit` is enabled.
 
 ```rust
 #![no_main]
@@ -160,39 +144,28 @@ fuzz_target!(|data: &[u8]| {
 });
 ```
 
-## Development
+## Develop
 
 ```sh
 cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
-cargo test --workspace
+cargo nextest run --workspace
 ```
 
-`cargo nextest run --workspace` is the runner used in CI. Snapshot tests use
-`insta`; run `cargo insta review` after intentionally changing harness output.
+CI runs `rustfmt`, `clippy` with warnings denied, `nextest`, `cargo-audit`,
+`cargo-deny`, and a nightly fuzz smoke run. Fuzzing lives in
+[`fuzz/`](fuzz/README.md) and needs a nightly toolchain. Supply-chain policy is
+in [`deny.toml`](deny.toml).
 
-Fuzzing lives in [`fuzz/`](fuzz/README.md) and requires a nightly toolchain.
-Supply-chain policy is in [`deny.toml`](deny.toml). CI runs `rustfmt`, `clippy`
-with warnings denied, `nextest`, `cargo-audit`, `cargo-deny`, and a non-blocking
-nightly fuzz smoke run.
-
-## Project structure
+## Layout
 
 ```
 crates/pfg-core/       Library: span-aware parser, scanner, harness generator
 crates/protofuzz-cli/  The protofuzz binary, built on clap
-fuzz/                  cargo-fuzz targets that self-test the scanner (nightly)
+fuzz/                  cargo-fuzz targets that self-test the scanner
 docs/                  Research report and migration plan
 src/                   Legacy Python implementation, kept until cutover
 ```
-
-## Documentation
-
-- [`docs/rust-sota-research.md`](docs/rust-sota-research.md): the cited research
-  report behind the port, covering project layout, CLI design, error handling,
-  parsing, fuzzing, testing, supply-chain hygiene, and protobuf security.
-- [`docs/rust-migration-plan.md`](docs/rust-migration-plan.md): the phased plan
-  that turned the research into this workspace.
 
 ## License
 
