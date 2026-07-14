@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
-use pfg_core::{generate_all, get_patterns, has_critical, parse_proto, scan, FindingReport};
+use pfg_core::{FindingReport, generate_all, get_patterns, has_critical, parse_proto, scan};
 
 #[derive(Parser)]
 #[command(

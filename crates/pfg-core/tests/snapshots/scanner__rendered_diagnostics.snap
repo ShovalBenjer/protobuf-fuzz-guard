@@ -1,0 +1,27 @@
+---
+source: crates/pfg-core/tests/scanner.rs
+expression: rendered
+---
+PROTOBUF-RECURSION-PROTO2
+
+  × Recursive message reference: Tree.left references itself. Vulnerable to unbounded recursion attacks.
+   ╭─[tree.proto:3:5]
+ 2 │ message Tree {
+ 3 │     Tree left = 1;
+   ·     ───────┬──────
+   ·            ╰── here
+ 4 │     group Legacy = 2;
+   ╰────
+  help: Unbounded stack recursion via deeply nested messages
+
+CVE-2024-7254-CLASS
+
+  × Field Tree.Legacy uses deprecated TYPE_GROUP. Known CVE surface (CVE-2024-7254 class). Replace with nested message.
+   ╭─[tree.proto:4:5]
+ 3 │     Tree left = 1;
+ 4 │     group Legacy = 2;
+   ·     ────────┬────────
+   ·             ╰── here
+ 5 │ }
+   ╰────
+  help: Unbounded recursion via deeply nested TYPE_GROUP (fixed in 3.25.5, 4.27.5, 4.28.2)
