@@ -103,9 +103,11 @@ fn parse_imports() {
     "#;
     let proto = parse_proto(content, "");
     assert_eq!(proto.imports.len(), 2);
-    assert!(proto
-        .imports
-        .contains(&"google/protobuf/timestamp.proto".to_string()));
+    assert!(
+        proto
+            .imports
+            .contains(&"google/protobuf/timestamp.proto".to_string())
+    );
 }
 
 #[test]

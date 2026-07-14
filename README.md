@@ -23,9 +23,9 @@ CI.
 ```
 
 > The Rust workspace under `crates/` is the maintained implementation. The
-> original Python package under `src/` stays until the cutover in
-> [`docs/rust-migration-plan.md`](docs/rust-migration-plan.md). Every design
-> decision is backed by a cited report, [`docs/rust-sota-research.md`](docs/rust-sota-research.md).
+> original Python package now lives under `legacy/` for reference. Every design
+> decision is backed by a cited report, [`docs/rust-sota-research.md`](docs/rust-sota-research.md),
+> and the port is tracked in [`docs/rust-migration-plan.md`](docs/rust-migration-plan.md).
 
 ## Why it matters
 
@@ -164,7 +164,7 @@ crates/pfg-core/       Library: span-aware parser, scanner, harness generator
 crates/protofuzz-cli/  The protofuzz binary, built on clap
 fuzz/                  cargo-fuzz targets that self-test the scanner
 docs/                  Research report and migration plan
-src/                   Legacy Python implementation, kept until cutover
+legacy/                Original Python implementation, kept for reference
 ```
 
 ## License

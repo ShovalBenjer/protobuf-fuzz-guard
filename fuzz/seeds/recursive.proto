@@ -1,0 +1,5 @@
+message Tree {
+    string value = 1;
+    Tree left = 2;
+    Tree right = 3;
+}

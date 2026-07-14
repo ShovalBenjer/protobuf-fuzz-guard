@@ -28,9 +28,9 @@ pub mod patterns;
 pub mod proto;
 pub mod scanner;
 
-pub use harness::{generate_all, generate_harness, HarnessError};
-pub use patterns::{get_pattern_by_id, get_patterns, CvePattern, PATTERNS};
+pub use harness::{HarnessError, generate_all, generate_harness};
+pub use patterns::{CvePattern, PATTERNS, get_pattern_by_id, get_patterns};
 pub use proto::{
-    has_recursive_refs, max_nesting_depth, parse_proto, ProtoField, ProtoFile, ProtoMessage, Span,
+    ProtoField, ProtoFile, ProtoMessage, Span, has_recursive_refs, max_nesting_depth, parse_proto,
 };
-pub use scanner::{has_critical, scan, Finding, FindingReport, Severity};
+pub use scanner::{Finding, FindingReport, Severity, has_critical, scan};

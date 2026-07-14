@@ -4,7 +4,7 @@
 //! `miette` diagnostics that point at the exact offending field (research §3).
 
 use crate::patterns::{self, ids};
-use crate::proto::{has_recursive_refs, max_nesting_depth, model::Span, ProtoFile};
+use crate::proto::{ProtoFile, has_recursive_refs, max_nesting_depth, model::Span};
 
 /// Severity of a scan finding.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

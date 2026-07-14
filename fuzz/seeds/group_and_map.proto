@@ -1,0 +1,11 @@
+syntax = "proto2";
+package legacy;
+import "other.proto";
+
+message Envelope {
+    group Legacy = 1;
+    map<string, int32> counts = 2;
+    repeated bytes a = 3;
+    repeated bytes b = 4;
+    repeated bytes c = 5;
+}

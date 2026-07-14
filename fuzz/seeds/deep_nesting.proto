@@ -1,0 +1,13 @@
+message A {
+    message B {
+        message C {
+            message D {
+                message E {
+                    message F {
+                        string val = 1;
+                    }
+                }
+            }
+        }
+    }
+}

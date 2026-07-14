@@ -43,11 +43,7 @@ pub fn match_package(line: &str) -> Option<&str> {
     let rest = rest.trim_start();
     let end = rest.find(';')?;
     let pkg = rest[..end].trim();
-    if pkg.is_empty() {
-        None
-    } else {
-        Some(pkg)
-    }
+    if pkg.is_empty() { None } else { Some(pkg) }
 }
 
 /// `import "path";` → the import path.
