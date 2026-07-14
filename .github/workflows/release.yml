@@ -1,0 +1,39 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build, audit, SBOM, publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@cargo-auditable
+      - uses: taiki-e/install-action@cargo-cyclonedx
+
+      - name: Build release binary with embedded dependency manifest
+        run: cargo auditable build --release --locked -p protofuzz-cli
+
+      - name: Generate SBOM (CycloneDX)
+        run: cargo cyclonedx --format json --all
+
+      - name: Stage artifacts
+        run: |
+          mkdir -p dist
+          cp target/release/protofuzz dist/protofuzz-linux-x86_64
+          find . -name 'bom.json' -o -name '*.cdx.json' | while read -r f; do
+            cp "$f" "dist/$(echo "$f" | tr '/' '_' )"
+          done
+          ls -la dist
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
