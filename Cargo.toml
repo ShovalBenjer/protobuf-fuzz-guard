@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/pfg-core", "crates/protofuzz-cli"]
+members = ["crates/pfg-core", "crates/protofuzz-cli", "crates/jev"]
 # The fuzz crate needs a nightly toolchain + libFuzzer sanitizers; keep it out of
 # the stable workspace so `cargo build`/`cargo test` stay green everywhere.
 exclude = ["fuzz"]
