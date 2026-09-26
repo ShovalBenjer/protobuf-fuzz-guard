@@ -1,0 +1,36 @@
+{
+  "manifest_version": 1,
+  "seeds": [
+    {
+      "covers": [],
+      "description": "Minimal proto3 baseline.",
+      "file": "simple.proto",
+      "notes": "Smoke-test seed: must parse clean and scan with zero findings. Guards the parser and harness generator against regressions on the trivial case."
+    },
+    {
+      "covers": [
+        "PROTOBUF-RECURSION-PROTO2"
+      ],
+      "description": "Direct recursive message references (Tree.left / Tree.right).",
+      "file": "recursive.proto",
+      "notes": "Exercises recursive-reference detection. Must yield a finding, never hang the scanner."
+    },
+    {
+      "covers": [
+        "CVE-2024-7254-CLASS",
+        "PROTOBUF-UNKNOWN-FIELD-OVERFLOW"
+      ],
+      "description": "proto2 groups plus map and repeated-bytes fields.",
+      "file": "group_and_map.proto",
+      "notes": "Exercises legacy group handling (CVE-2024-7254 class: unbounded recursion via nested groups) and the many-repeated-bytes memory-exhaustion heuristic."
+    },
+    {
+      "covers": [
+        "PROTOBUF-RECURSION-PROTO2"
+      ],
+      "description": "Six levels of nested messages (A through F).",
+      "file": "deep_nesting.proto",
+      "notes": "Exercises the nesting-depth threshold: depth >= 5 must be Critical. Regression seed for stack-overflow-class DoS patterns."
+    }
+  ]
+}

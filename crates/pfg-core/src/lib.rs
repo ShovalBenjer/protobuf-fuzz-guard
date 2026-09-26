@@ -23,10 +23,16 @@
 //! assert!(findings.iter().any(|f| f.message.contains("Recursive")));
 //! ```
 
+pub mod findings;
 pub mod harness;
 pub mod patterns;
 pub mod proto;
 pub mod scanner;
+
+pub use findings::{
+    MAX_MESSAGE_LEN, SCHEMA_VERSION, ValidationError, dedup_findings, validate_finding,
+    validate_findings,
+};
 
 pub use harness::{HarnessError, generate_all, generate_harness};
 pub use patterns::{CvePattern, PATTERNS, get_pattern_by_id, get_patterns};

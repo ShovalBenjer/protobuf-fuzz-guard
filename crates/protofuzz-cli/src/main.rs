@@ -65,11 +65,21 @@ fn main() -> ExitCode {
 
 fn cmd_scan(files: &[PathBuf], json: bool) -> ExitCode {
     #[derive(serde::Serialize)]
+    struct JsonSpan {
+        start: usize,
+        end: usize,
+    }
+
+    /// JSON shape of one finding; must satisfy `docs/findings.schema.json`
+    /// (validated deterministically by `pfg_core::findings`).
+    #[derive(serde::Serialize)]
     struct JsonFinding {
+        schema_version: u32,
         severity: &'static str,
         pattern_id: Option<&'static str>,
         message: String,
         file: String,
+        span: Option<JsonSpan>,
     }
 
     let mut json_out = Vec::new();
@@ -92,10 +102,15 @@ fn cmd_scan(files: &[PathBuf], json: bool) -> ExitCode {
         if json {
             for f in &findings {
                 json_out.push(JsonFinding {
+                    schema_version: pfg_core::SCHEMA_VERSION,
                     severity: f.severity.as_str(),
                     pattern_id: f.pattern_id,
                     message: f.message.clone(),
                     file: f.file_path.clone(),
+                    span: f.span.map(|s| JsonSpan {
+                        start: s.start,
+                        end: s.end,
+                    }),
                 });
             }
         } else {
