@@ -55,7 +55,7 @@ pub fn default_routes() -> Vec<Route> {
             api_key_env: Some("JEV_MODEL_TOKEN"),
             cost_per_1k: 0.0,
             latency_ms_p50: 1200,
-            max_context: 128000,
+            max_context: 128_000,
             available: false,
         },
     ]
@@ -137,13 +137,18 @@ mod tests {
     #[test]
     fn complexity_grows_with_size_and_keywords() {
         let small = estimate_complexity("fix typo");
-        let big = estimate_complexity("prove the security architecture of this distributed refactor");
+        let big =
+            estimate_complexity("prove the security architecture of this distributed refactor");
         assert!(small < big);
     }
 
     #[test]
     fn complexity_is_bounded() {
-        for task in ["", "hi", "prove security architecture refactor distributed concurrency"] {
+        for task in [
+            "",
+            "hi",
+            "prove security architecture refactor distributed concurrency",
+        ] {
             let c = estimate_complexity(task);
             assert!((0.0..=1.0).contains(&c), "out of bounds: {c}");
         }
