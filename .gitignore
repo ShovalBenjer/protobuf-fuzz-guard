@@ -15,3 +15,7 @@ dist/
 # insta pending snapshots
 *.snap.new
 
+
+# jev router decision log: local telemetry, append-only JSONL; never committed.
+# (matches at any depth: tests run with the crate dir as CWD)
+decisions.jsonl
