@@ -1,0 +1,11 @@
+[package]
+name = "jev"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Cost/latency-aware model router: local small LMs first, free tiers next, paid escalation last"
+
+[lints]
+workspace = true
