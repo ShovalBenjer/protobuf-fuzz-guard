@@ -75,7 +75,7 @@ fn ollama_alive(base_url: &str) -> bool {
     addr.is_some_and(|a| TcpStream::connect_timeout(&a, Duration::from_millis(1500)).is_ok())
 }
 
-/// Heuristic task complexity in `[0.0, 1.0]`: length plus domain keywords.
+/// Hand-coded task-complexity rules in `[0.0, 1.0]`: length plus domain keywords.
 #[allow(clippy::cast_precision_loss)] // length is capped at 4000; float precision is irrelevant here
 #[must_use]
 pub fn estimate_complexity(task: &str) -> f64 {
