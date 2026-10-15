@@ -25,7 +25,10 @@ fn deep_nesting_is_critical() {
         .iter()
         .filter(|f| f.severity == Severity::Critical)
         .collect();
-    assert!(!criticals.is_empty(), "expected critical findings, got {criticals:?}");
+    assert!(
+        !criticals.is_empty(),
+        "expected critical findings, got {criticals:?}"
+    );
     assert!(
         criticals
             .iter()
@@ -61,7 +64,10 @@ fn clean_proto_has_no_findings() {
     ";
     let proto = parse_proto(content, "clean.proto");
     let findings = scan(&proto);
-    assert!(findings.is_empty(), "expected no findings, got {findings:?}");
+    assert!(
+        findings.is_empty(),
+        "expected no findings, got {findings:?}"
+    );
 }
 
 #[test]
