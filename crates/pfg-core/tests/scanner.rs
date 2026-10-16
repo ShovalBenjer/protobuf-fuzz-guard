@@ -25,7 +25,10 @@ fn deep_nesting_is_critical() {
         .iter()
         .filter(|f| f.severity == Severity::Critical)
         .collect();
-    assert!(!criticals.is_empty());
+    assert!(
+        !criticals.is_empty(),
+        "expected critical findings, got {criticals:?}"
+    );
     assert!(
         criticals
             .iter()
@@ -60,7 +63,11 @@ fn clean_proto_has_no_findings() {
     }
     ";
     let proto = parse_proto(content, "clean.proto");
-    assert!(scan(&proto).is_empty());
+    let findings = scan(&proto);
+    assert!(
+        findings.is_empty(),
+        "expected no findings, got {findings:?}"
+    );
 }
 
 #[test]
@@ -126,7 +133,7 @@ fn rendered_diagnostic_snapshot() {
         "syntax = \"proto3\";\nmessage Tree {\n    Tree left = 1;\n    group Legacy = 2;\n}\n";
     let proto = parse_proto(content, "tree.proto");
     let findings = scan(&proto);
-    assert!(!findings.is_empty());
+    assert!(!findings.is_empty(), "expected findings, got {findings:?}");
 
     // Deterministic, color-free rendering for a stable snapshot.
     let handler =
